@@ -9,9 +9,9 @@ canvas.height = container.clientHeight;
 
 var pointCount = 10000;
 
-var points = [];
+var quadtree = new Quadtree(canvas.width, canvas.height);
 
-context.fillStyle = "#000000";
+context.fillStyle = "#FFFFFF";
 
 for(var i = 0; i < pointCount; i++){
 	var point = {
@@ -21,18 +21,28 @@ for(var i = 0; i < pointCount; i++){
 		,nearestNeighbor: null
 	};
 	
-	points.push(point);
+	quadtree.insert(point);
 
-	context.fillRect(point.x, point.y, 1, 1);
+	//context.fillRect(point.x, point.y, 1, 1);
 }
 
 var tree = [];
 
-var startingPoint = points[~~(Math.random()*points.length)];
-startingPoint.starting = true;
-addPointToTree(startingPoint);
+var newPoint = quadtree.getNearest(Math.random()*canvas.width, Math.random()*canvas.height).point;
+newPoint.color = "#FFFFFF";
+addPointToTree(newPoint);
 
-context.strokeStyle = "#FF0000";
+/*newPoint = quadtree.getNearest(Math.random()*canvas.width, Math.random()*canvas.height).point;
+newPoint.color = "#FFFF00";
+addPointToTree(newPoint);
+
+newPoint = quadtree.getNearest(Math.random()*canvas.width, Math.random()*canvas.height).point;
+newPoint.color = "#FF00FF";
+addPointToTree(newPoint);
+
+newPoint = quadtree.getNearest(Math.random()*canvas.width, Math.random()*canvas.height).point;
+newPoint.color = "#00FF00";
+addPointToTree(newPoint);*/
 
 var iterationsPerFrame = 1;
 
@@ -42,13 +52,13 @@ function iterate(){
 
 	for(var i = 0; i < iterationsPerFrame; i++){
 		grow();
-		if(points.length <= 0){
+		if(quadtree.getCount() == 0){
 			break;
 		}
 	}
 	
-	if(points.length > 0){
-		setTimeout(iterate, 0);
+	if(quadtree.getCount() > 0){
+		requestAnimationFrame(iterate);
 	}
 }
 
@@ -64,34 +74,34 @@ function grow(){
 		return 0;
 	})[0];
 
+	next.nearestNeighbor.color = next.color;
+	
+	context.strokeStyle = next.color;
 	context.beginPath();
 	context.moveTo(next.x+0.5, next.y+0.5);
 	context.lineTo(next.nearestNeighbor.x+0.5, next.nearestNeighbor.y+0.5);
 	context.stroke();
-
-	//console.log(next.nearestNeighbor);
 
 	addPointToTree(next.nearestNeighbor);
 }
 
 
 function addPointToTree(point){
-	//console.log(point);
 	
 	point.colonised = true;
 
-	points = points.filter(function(e){
-		return (!e.colonised);
-	});
+	quadtree.remove(point);
 
 	tree.push(point);
 
-	if(points.length == 0){
+	if(quadtree.getCount() == 0){
 		return false;
 	}
-	
-	point.nearestNeighbor = getNearestPoint(point);
-	point.nearestDist = Math.sqrt(Math.pow(point.nearestNeighbor.x - point.x, 2) + Math.pow(point.nearestNeighbor.y - point.y, 2));
+
+	var nearest = quadtree.getNearestNeighbor(point);
+	console.log(nearest);
+	point.nearestNeighbor = nearest.point;
+	point.nearestDist = nearest.distance;
 
 	updateNeighbors();
 }
@@ -100,29 +110,11 @@ function updateNeighbors(){
 	for(var i = 0; i < tree.length; i++){
 		var point = tree[i];
 		if(point.nearestNeighbor.colonised){
-			point.nearestNeighbor = getNearestPoint(point);
-			point.nearestDist = Math.sqrt(Math.pow(point.nearestNeighbor.x - point.x, 2) + Math.pow(point.nearestNeighbor.y - point.y, 2));
+			var nearest = quadtree.getNearestNeighbor(point);
+			point.nearestNeighbor = nearest.point;
+			point.nearestDist = nearest.distance;
 		}
 	}
-}
-
-function getNearestPoint(point){
-	var nearest = points.sort(function(a, b){
-		var aDist = Math.sqrt(Math.pow(a.x - point.x, 2) + Math.pow(a.y - point.y, 2));
-		var bDist = Math.sqrt(Math.pow(b.x - point.x, 2) + Math.pow(b.y - point.y, 2));
-		if(a == point || a.colonised){
-			return 1;
-		} else if(b == point || b.colonised){
-			return -1;
-		} else if (aDist < bDist) {
-			return -1;
-		} else if (aDist > bDist) {
-			return 1;
-		}
-		return 0;
-	})[0];
-
-	return nearest;
 }
 
 
