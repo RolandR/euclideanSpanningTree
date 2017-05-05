@@ -124,7 +124,6 @@ function Quadtree(width, height){
 			 distance: height+width
 			,point: null
 		}
-		console.log(point.x, point.y);
 		return nearest(point.x, point.y, best, root, width, height, true);
 	}
 
